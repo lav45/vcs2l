@@ -358,8 +358,11 @@ class GitClient(VcsClientBase):
                     assert False
                 cmd_fetch += ['--depth', '1']
             else:
-                # For non-shallow mode, only fetch specific commit hashes
-                if version_type == 'hash':
+                # For non-shallow mode, only fetch specific commit hashes;
+                # a local branch not pushed to the remote yet is not one
+                if version_type == 'hash' and not self._is_local_branch(
+                    checkout_version
+                ):
                     cmd_fetch.append(checkout_version)
             result_fetch = self._run_command(cmd_fetch, retry=command.retry)
             if result_fetch['returncode']:
@@ -660,6 +663,16 @@ class GitClient(VcsClientBase):
                 }
 
         return result
+
+    def _is_local_branch(self, name):
+        cmd = [
+            GitClient._executable,
+            'show-ref',
+            '--verify',
+            '--quiet',
+            'refs/heads/%s' % name,
+        ]
+        return self._run_command(cmd)['returncode'] == 0
 
     def _has_upstream(self, branch):
         cmd = [GitClient._executable, 'config', '--get', 'branch.%s.merge' % branch]
