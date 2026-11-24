@@ -651,8 +651,9 @@ class GitClient(VcsClientBase):
                 return result_rev_parse
             detached = result_rev_parse['output'] == 'HEAD'
 
-            if detached:
+            if detached or not self._has_upstream(result_rev_parse['output']):
                 # warn but not fail about the inability to pull a detached head
+                # or a branch without upstream, e.g. not pushed to the remote yet
                 return {
                     'cmd': '',
                     'cwd': self.path,
@@ -661,6 +662,10 @@ class GitClient(VcsClientBase):
                 }
 
         return result
+
+    def _has_upstream(self, branch):
+        cmd = [GitClient._executable, 'config', '--get', 'branch.%s.merge' % branch]
+        return self._run_command(cmd)['returncode'] == 0
 
     def push(self, _command):
         self._check_executable()
